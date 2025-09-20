@@ -2,6 +2,7 @@
 """Views providing a django-data-wizard powered import interface."""
 from __future__ import annotations
 
+from collections import OrderedDict
 from typing import Any, Dict, List, Tuple
 
 from django import forms as django_forms
@@ -13,6 +14,8 @@ from django.utils.functional import cached_property
 from django.views import View
 from django.views.generic import TemplateView
 
+from django.forms.models import model_to_dict
+
 from . import forms, importers, models
 
 
@@ -21,6 +24,25 @@ class SurveyWizardView(View):
 
     template_name = "pmksy/wizard_form.html"
     success_template = "pmksy/wizard_done.html"
+    session_key = "pmksy_survey_wizard"
+
+    FORMSET_RELATED_NAMES: Dict[str, str] = {
+        "land_holdings": "land_holdings",
+        "assets": "assets",
+        "crop_history": "crop_history",
+        "cost_cultivation": "cultivation_costs",
+        "water_management": "water_management",
+        "pest_disease": "pest_diseases",
+        "nutrient_management": "nutrient_management",
+        "income_crops": "crop_income",
+        "irrigated_rainfed": "irrigated_rainfed",
+        "enterprises": "enterprises",
+        "annual_income": "annual_income",
+        "consumption": "consumption_patterns",
+        "market_price": "market_prices",
+        "migration": "migration_records",
+        "adaptation": "adaptation_strategies",
+    }
 
     STEP_CONFIG: Dict[str, Dict[str, Any]] = {
         "farmer": {
@@ -71,6 +93,317 @@ class SurveyWizardView(View):
     }
 
     STEP_ORDER: Tuple[str, ...] = tuple(STEP_CONFIG.keys())
+
+    # ------------------------------------------------------------------
+    def get(self, request: HttpRequest, step: str | None = None) -> HttpResponse:
+        step_slug = self._get_step_slug(step)
+        farmer = self._get_farmer(request)
+        if step_slug != self.STEP_ORDER[0] and farmer is None:
+            return redirect(self._step_url(self.STEP_ORDER[0]))
+
+        config = self.STEP_CONFIG[step_slug]
+        form = self._build_form(config, farmer)
+        formsets = self._build_formsets(config, farmer)
+        context = self._build_context(step_slug, config, form, formsets)
+        return render(request, self.template_name, context)
+
+    def post(self, request: HttpRequest, step: str | None = None) -> HttpResponse:
+        step_slug = self._get_step_slug(step)
+        previous_step = self._previous_step(step_slug)
+        if "_prev" in request.POST and previous_step:
+            return redirect(self._step_url(previous_step))
+
+        farmer = self._get_farmer(request)
+        if step_slug != self.STEP_ORDER[0] and farmer is None:
+            return redirect(self._step_url(self.STEP_ORDER[0]))
+
+        config = self.STEP_CONFIG[step_slug]
+        form = self._build_form(config, farmer, data=request.POST)
+        formsets = self._build_formsets(config, farmer, data=request.POST)
+
+        valid = True
+        if form is not None and not form.is_valid():
+            valid = False
+        for _, (_, formset) in formsets.items():
+            if not formset.is_valid():
+                valid = False
+
+        if not valid:
+            context = self._build_context(step_slug, config, form, formsets)
+            return render(request, self.template_name, context)
+
+        farmer = self._persist_step(request, step_slug, form, formsets, farmer)
+        if farmer is None:
+            return redirect(self._step_url(self.STEP_ORDER[0]))
+
+        next_step = self._next_step(step_slug)
+        if next_step:
+            return redirect(self._step_url(next_step))
+        return self._render_success(request, farmer)
+
+    # ------------------------------------------------------------------
+    def _get_step_slug(self, step: str | None) -> str:
+        if step is None:
+            return self.STEP_ORDER[0]
+        if step not in self.STEP_CONFIG:
+            raise Http404("Unknown wizard step")
+        return step
+
+    def _build_context(
+        self,
+        step_slug: str,
+        config: Dict[str, Any],
+        form: django_forms.Form | None,
+        formsets: "OrderedDict[str, Tuple[str, django_forms.BaseFormSet]]",
+    ) -> Dict[str, Any]:
+        step_index = self.STEP_ORDER.index(step_slug)
+        context = {
+            "step": step_slug,
+            "step_config": config,
+            "step_index": step_index + 1,
+            "step_count": len(self.STEP_ORDER),
+            "form": form,
+            "formsets": [
+                (key, title, formset) for key, (title, formset) in formsets.items()
+            ],
+            "previous_step": self._previous_step(step_slug),
+            "next_step": self._next_step(step_slug),
+        }
+        return context
+
+    def _build_form(
+        self,
+        config: Dict[str, Any],
+        farmer: models.Farmer | None,
+        *,
+        data: Dict[str, Any] | None = None,
+    ) -> django_forms.Form | None:
+        form_class = config.get("form")
+        if not form_class:
+            return None
+
+        kwargs: Dict[str, Any] = {}
+        if data is not None:
+            kwargs["data"] = data
+
+        instance = self._get_form_instance(form_class, farmer)
+        if instance is not None:
+            kwargs["instance"] = instance
+
+        return form_class(**kwargs)
+
+    def _build_formsets(
+        self,
+        config: Dict[str, Any],
+        farmer: models.Farmer | None,
+        *,
+        data: Dict[str, Any] | None = None,
+    ) -> "OrderedDict[str, Tuple[str, django_forms.BaseFormSet]]":
+        built: "OrderedDict[str, Tuple[str, django_forms.BaseFormSet]]" = OrderedDict()
+        formset_configs = config.get("formsets", {})
+        for key, (formset_class, title) in formset_configs.items():
+            kwargs: Dict[str, Any] = {"prefix": key}
+            if data is not None:
+                kwargs["data"] = data
+            else:
+                kwargs["initial"] = self._initial_for_formset(key, formset_class, farmer)
+            built[key] = (title, formset_class(**kwargs))
+        return built
+
+    def _get_form_instance(
+        self, form_class: type[django_forms.Form], farmer: models.Farmer | None
+    ) -> Any:
+        if farmer is None:
+            return None
+
+        model = getattr(form_class._meta, "model", None)
+        if model is None:
+            return None
+        if model is models.Farmer:
+            return farmer
+        if model is models.FinancialRecord:
+            return farmer.financials.first()
+        return None
+
+    def _initial_for_formset(
+        self,
+        key: str,
+        formset_class: type[django_forms.BaseFormSet],
+        farmer: models.Farmer | None,
+    ) -> List[Dict[str, Any]]:
+        if farmer is None:
+            return []
+
+        related_name = self.FORMSET_RELATED_NAMES.get(key, key)
+        manager = getattr(farmer, related_name, None)
+        if manager is None:
+            return []
+
+        try:
+            queryset = manager.all()
+        except AttributeError:
+            return []
+
+        fields = list(getattr(formset_class.form, "base_fields", {}).keys())
+        return [model_to_dict(obj, fields=fields) for obj in queryset]
+
+    # ------------------------------------------------------------------
+    def _persist_step(
+        self,
+        request: HttpRequest,
+        step_slug: str,
+        form: django_forms.Form | None,
+        formsets: "OrderedDict[str, Tuple[str, django_forms.BaseFormSet]]",
+        farmer: models.Farmer | None,
+    ) -> models.Farmer | None:
+        if form is not None:
+            farmer = self._save_form(request, step_slug, form, farmer)
+
+        if farmer is None:
+            return None
+
+        self._save_formsets(farmer, formsets)
+        return farmer
+
+    def _save_form(
+        self,
+        request: HttpRequest,
+        step_slug: str,
+        form: django_forms.Form,
+        farmer: models.Farmer | None,
+    ) -> models.Farmer | None:
+        model = getattr(form, "_meta", None)
+        form_model = getattr(model, "model", None)
+
+        if form_model is models.Farmer:
+            farmer_obj = form.save()
+            self._store_farmer(request, farmer_obj)
+            return farmer_obj
+
+        if farmer is None:
+            return None
+
+        if form_model is models.FinancialRecord:
+            instance = form.save(commit=False)
+            instance.farmer = farmer
+            instance.save()
+            models.FinancialRecord.objects.filter(farmer=farmer).exclude(pk=instance.pk).delete()
+            return farmer
+
+        saved = form.save(commit=False)
+        if hasattr(saved, "farmer") and saved.farmer_id is None:
+            saved.farmer = farmer
+        saved.save()
+        return farmer
+
+    def _save_formsets(
+        self,
+        farmer: models.Farmer,
+        formsets: "OrderedDict[str, Tuple[str, django_forms.BaseFormSet]]",
+    ) -> None:
+        for key, (_, formset) in formsets.items():
+            form_class = getattr(formset, "form", None)
+            model = getattr(getattr(form_class, "_meta", None), "model", None)
+            if model is None:
+                continue
+
+            related_name = self.FORMSET_RELATED_NAMES.get(key, key)
+            manager = getattr(farmer, related_name, None)
+            if manager is None:
+                continue
+
+            try:
+                manager.all().delete()
+            except AttributeError:
+                continue
+
+            for subform in formset:
+                cleaned = getattr(subform, "cleaned_data", None)
+                if not cleaned:
+                    continue
+                if formset.can_delete and cleaned.get("DELETE"):
+                    continue
+                if not subform.has_changed():
+                    continue
+
+                obj = model(farmer=farmer)
+                for field, value in cleaned.items():
+                    if field == "DELETE":
+                        continue
+                    setattr(obj, field, value)
+                obj.save()
+
+    # ------------------------------------------------------------------
+    def _previous_step(self, step_slug: str) -> str | None:
+        index = self.STEP_ORDER.index(step_slug)
+        if index == 0:
+            return None
+        return self.STEP_ORDER[index - 1]
+
+    def _next_step(self, step_slug: str) -> str | None:
+        index = self.STEP_ORDER.index(step_slug)
+        if index + 1 >= len(self.STEP_ORDER):
+            return None
+        return self.STEP_ORDER[index + 1]
+
+    def _step_url(self, step_slug: str) -> str:
+        if step_slug == self.STEP_ORDER[0]:
+            return reverse("pmksy:wizard")
+        return reverse("pmksy:wizard-step", args=(step_slug,))
+
+    def _get_farmer(self, request: HttpRequest) -> models.Farmer | None:
+        storage = request.session.get(self.session_key, {})
+        farmer_id = storage.get("farmer_id")
+        if not farmer_id:
+            return None
+        try:
+            return models.Farmer.objects.get(pk=farmer_id)
+        except models.Farmer.DoesNotExist:
+            self._clear_storage(request)
+            return None
+
+    def _store_farmer(self, request: HttpRequest, farmer: models.Farmer) -> None:
+        storage = request.session.get(self.session_key, {}).copy()
+        storage["farmer_id"] = str(farmer.pk)
+        request.session[self.session_key] = storage
+
+    def _clear_storage(self, request: HttpRequest) -> None:
+        if self.session_key in request.session:
+            del request.session[self.session_key]
+
+    # ------------------------------------------------------------------
+    def _render_success(self, request: HttpRequest, farmer: models.Farmer) -> HttpResponse:
+        self._clear_storage(request)
+        summary = {
+            "land_holdings": farmer.land_holdings.count(),
+            "assets": farmer.assets.count(),
+            "crop_history": farmer.crop_history.count(),
+            "water_management": farmer.water_management.count(),
+            "pest_disease": farmer.pest_diseases.count(),
+            "cost_cultivation": farmer.cultivation_costs.count(),
+            "nutrient_management": farmer.nutrient_management.count(),
+            "income_crops": farmer.crop_income.count(),
+            "irrigated_rainfed": farmer.irrigated_rainfed.count(),
+            "enterprises": farmer.enterprises.count(),
+            "annual_income": farmer.annual_income.count(),
+            "consumption": farmer.consumption_patterns.count(),
+            "market_price": farmer.market_prices.count(),
+            "migration": farmer.migration_records.count(),
+            "adaptation": farmer.adaptation_strategies.count(),
+            "financial_record": farmer.financials.count(),
+        }
+        family_total = (
+            farmer.family_males
+            + farmer.family_females
+            + farmer.family_children
+            + farmer.family_adult
+        )
+        context = {
+            "farmer": farmer,
+            "family_total": family_total,
+            "summary": summary,
+        }
+        return render(request, self.success_template, context)
 
 
 from data_wizard.sources.models import FileSource
