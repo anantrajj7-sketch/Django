@@ -1,0 +1,16 @@
+body {
+    background-color: #f5f7fb;
+}
+
+.card {
+    border-radius: 0.75rem;
+}
+
+.navbar-brand {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+footer {
+    font-size: 0.9rem;
+}
