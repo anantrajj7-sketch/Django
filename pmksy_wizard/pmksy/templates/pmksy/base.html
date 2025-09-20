@@ -15,6 +15,10 @@
         <p class="lead">
           A guided workflow to capture farmer socio-economic indicators following the PMKSY schema.
         </p>
+        <nav class="app-nav">
+          <a href="{% url 'pmksy:wizard' %}">Manual entry</a>
+          <a href="{% url 'pmksy:import' %}">Bulk import</a>
+        </nav>
       </div>
     </header>
     <main class="container">

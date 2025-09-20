@@ -1,1 +1,2 @@
 Django>=4.2,<5.0
+data-wizard>=2.0.0
