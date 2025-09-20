@@ -37,6 +37,26 @@ body {
   color: #475569;
 }
 
+.app-nav {
+  margin-top: 1rem;
+  display: inline-flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.app-nav a {
+  text-decoration: none;
+  font-weight: 600;
+  color: var(--primary);
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(20, 184, 166, 0.12);
+}
+
+.app-nav a:hover {
+  background: rgba(20, 184, 166, 0.24);
+}
+
 .app-footer {
   margin-top: 3rem;
   background: white;
@@ -100,6 +120,18 @@ form {
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 10px 40px rgba(15, 23, 42, 0.06);
+}
+
+form.plain-form {
+  display: inline;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+form.plain-form button {
+  margin: 0;
 }
 
 .form-section + .form-section {
@@ -305,6 +337,38 @@ form {
 
 .summary-table tr:nth-child(even) {
   background: #f8fafc;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.table-wrapper table {
+  margin-bottom: 0;
+  border: none;
+}
+
+.error-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.error-list .summary-card {
+  background: #fff5f5;
+  border-color: #fecaca;
+}
+
+.error-list .summary-card h4 {
+  margin-top: 0;
+}
+
+.error-list .summary-card ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
 }
 
 @media (max-width: 640px) {

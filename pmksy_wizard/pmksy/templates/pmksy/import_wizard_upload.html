@@ -1,0 +1,65 @@
+{% extends "pmksy/base.html" %}
+{% block title %}Bulk import · PMKSY Survey Wizard{% endblock %}
+{% block content %}
+  <section class="wizard-status">
+    <h2>Bulk data import</h2>
+    <p>
+      Upload CSV files that follow the <strong>PMKSY socio-economic schema</strong> to create records in bulk.
+      Each dataset expects column headers that match the field names listed in
+      <code>pmksy_schema.md</code>.
+    </p>
+  </section>
+
+  <section class="completion">
+    <h3>Available datasets</h3>
+    <p class="section-help">
+      Every import links rows to a farmer using the <code>farmer_id</code> column when required. Start with the
+      farmer profile before importing linked tables.
+    </p>
+    <div class="summary-grid">
+      {% for target in targets %}
+        <article class="summary-card">
+          <h4>{{ target.label }}</h4>
+          <p>{{ target.description }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="message error">
+        {% for error in form.non_field_errors %}
+          <p>{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <div class="form-grid">
+      <div class="form-field{% if form.target.errors %} has-error{% endif %}">
+        <label for="{{ form.target.id_for_label }}">{{ form.target.label }}</label>
+        {{ form.target }}
+        {% if form.target.help_text %}
+          <span class="help">{{ form.target.help_text }}</span>
+        {% endif %}
+        {% for error in form.target.errors %}
+          <span class="error">{{ error }}</span>
+        {% endfor %}
+      </div>
+      <div class="form-field{% if form.data_file.errors %} has-error{% endif %}">
+        <label for="{{ form.data_file.id_for_label }}">{{ form.data_file.label }}</label>
+        {{ form.data_file }}
+        {% if form.data_file.help_text %}
+          <span class="help">{{ form.data_file.help_text }}</span>
+        {% endif %}
+        {% for error in form.data_file.errors %}
+          <span class="error">{{ error }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="wizard-actions">
+      <button type="submit" class="primary">Continue to preview</button>
+      <a href="{% url 'pmksy:wizard' %}" class="secondary">Back to manual entry</a>
+    </div>
+  </form>
+{% endblock %}
