@@ -6,8 +6,7 @@ This Django project implements a multi-step data collection wizard for the PMKSY
 - Dynamic formsets for repeated sections such as land holdings, assets, crop history, cost of cultivation and more.
 - SQLite database configuration out of the box with admin registrations for all models.
 - Responsive UI with progressive enhancement for adding formset rows without reloading.
-
-- CSV-driven bulk import wizard backed by the official [`data-wizard`](https://pypi.org/project/data-wizard/) package for ingesting data that already exists in spreadsheets following the PMKSY schema.
+- CSV-driven bulk import wizard powered by a lightweight `data_wizard` compatibility layer for ingesting data that already exists in spreadsheets following the PMKSY schema.
 
 
 ## Getting started

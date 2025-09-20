@@ -20,8 +20,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "data_wizard",
-    "data_wizard.sources",
-
     "pmksy",
 ]
 
