@@ -1,0 +1,29 @@
+{% extends "pmksy/base.html" %}
+
+{% block title %}PMKSY Bulk Import Library{% endblock %}
+
+{% block content %}
+<section class="intro">
+  <h2>Choose a dataset to import</h2>
+  <p>
+    Each section below launches a <strong>django-data-wizard</strong> workflow tuned to the PMKSY schema. Upload CSV, XLSX or
+    JSON files and confirm the automatic column mappings before committing the records to the database.
+  </p>
+</section>
+<section class="wizard-grid">
+  {% for wizard in wizards %}
+    <article class="wizard-card">
+      <header>
+        <h3>{{ wizard.title }}</h3>
+      </header>
+      <p>{{ wizard.description }}</p>
+      {% if wizard.help_text %}
+        <p class="muted">{{ wizard.help_text }}</p>
+      {% endif %}
+      <a class="btn" href="{{ wizard.url }}">Launch import</a>
+    </article>
+  {% empty %}
+    <p>No importers registered yet.</p>
+  {% endfor %}
+</section>
+{% endblock %}
