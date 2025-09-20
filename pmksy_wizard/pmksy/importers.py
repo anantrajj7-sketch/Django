@@ -1,3 +1,4 @@
+
 """Dataset definitions that plug PMKSY models into data-wizard helpers."""
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ from data_wizard import (
 from django.db import models
 
 from . import models as pmksy_models
+
 
 TARGET_DEFINITIONS: Sequence[tuple[str, str, str, type[models.Model], Sequence[str]]] = [
     (
@@ -146,11 +148,13 @@ TARGET_DEFINITIONS: Sequence[tuple[str, str, str, type[models.Model], Sequence[s
     ),
 ]
 
+
 IMPORT_TARGETS: Dict[str, Dataset] = {}
 TARGET_LIST: List[Dataset] = []
 
 for key, label, description, model, required_cols in TARGET_DEFINITIONS:
     target = Dataset(
+d
         key=key,
         label=label,
         description=description,
@@ -162,8 +166,10 @@ for key, label, description, model, required_cols in TARGET_DEFINITIONS:
     TARGET_LIST.append(target)
 
 
+
 def get_target(key: str) -> Dataset:
     """Retrieve the dataset configuration for a given key."""
+
 
     if key not in IMPORT_TARGETS:
         raise KeyError(f"Unknown import target '{key}'")
@@ -188,3 +194,4 @@ def perform_import(target: Dataset, parsed_rows: Sequence[ParsedRow]) -> ImportS
 
     importer = ModelImporter(target)
     return importer.import_rows(parsed_rows)
+

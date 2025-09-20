@@ -4,16 +4,28 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{% block title %}PMKSY Survey Wizard{% endblock %}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha512-NhSC1YmyruXifcj/KFRWoCjUHJpYj1ZJh+7EVnKPgkY5x1krnLRtP2VZ3rWUE00x7rKZ6+11dQFOS5i8a5YdRg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <title>{% block title %}PMKSY Bulk Import{% endblock %}</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"
+      integrity="sha512-NhSC1YmyruXifcj/KFRWoCjUHJpYj1ZJh+7EVnKPgkY5x1krnLRtP2VZ3rWUE00x7rKZ6+11dQFOS5i8a5YdRg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
     <link rel="stylesheet" href="{% static 'pmksy/css/styles.css' %}" />
+    {% block extra_head %}{% endblock %}
+
   </head>
   <body>
     <header class="app-header">
       <div class="container">
-        <h1>PMKSY Survey Data Wizard</h1>
+
+        <h1>PMKSY Data Import Hub</h1>
         <p class="lead">
-          A guided workflow to capture farmer socio-economic indicators following the PMKSY schema.
+          Upload spreadsheet or CSV extracts in line with the PMKSY socio-economic schema and let
+          <strong>django-data-wizard</strong> guide the mapping process.
+
         </p>
         <nav class="app-nav">
           <a href="{% url 'pmksy:wizard' %}">Manual entry</a>
@@ -22,23 +34,20 @@
       </div>
     </header>
     <main class="container">
-      {% if messages %}
-        <div class="messages">
-          {% for message in messages %}
-            <div class="message {{ message.tags }}">{{ message }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
+
+
       {% block content %}{% endblock %}
     </main>
     <footer class="app-footer">
       <div class="container">
         <p>
-          Built for demonstration purposes. All fields follow the
-          <a href="https://pmksy.gov.in/" target="_blank" rel="noopener">PMKSY</a>
-          socio-economic survey structure.
+
+          Need help shaping your files? Refer to the <code>pmksy_schema.md</code> dictionary for field names and
+          relationships.
         </p>
       </div>
     </footer>
+    {% block extra_body %}{% endblock %}
+
   </body>
 </html>
