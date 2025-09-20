@@ -1,0 +1,164 @@
+{% extends "pmksy/base.html" %}
+{% block title %}Import preview · PMKSY Survey Wizard{% endblock %}
+{% block content %}
+  <section class="wizard-status">
+    <div class="step-heading">
+      <h2>{{ target.label }}</h2>
+      <p>{{ target.description }}</p>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <h3>Total rows detected</h3>
+        <p><strong>{{ row_count }}</strong></p>
+      </div>
+      <div class="summary-card">
+        <h3>Columns recognised</h3>
+        <p><strong>{{ recognized_columns|length }}</strong> of {{ column_order|length }}</p>
+      </div>
+      <div class="summary-card">
+        <h3>Required columns</h3>
+        <ul>
+          {% for label in required_columns %}
+            <li>{{ label }}</li>
+          {% empty %}
+            <li>No mandatory columns.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  {% if import_complete %}
+    <section class="completion">
+      <h3>Import summary</h3>
+      <table class="summary-table">
+        <tbody>
+          <tr>
+            <th>Total rows processed</th>
+            <td>{{ summary.total_rows }}</td>
+          </tr>
+          <tr>
+            <th>Rows created</th>
+            <td>{{ summary.created }}</td>
+          </tr>
+          <tr>
+            <th>Rows skipped (empty)</th>
+            <td>{{ summary.skipped }}</td>
+          </tr>
+          <tr>
+            <th>Errors</th>
+            <td>{{ summary.error_count }}</td>
+          </tr>
+        </tbody>
+      </table>
+      {% if summary.errors %}
+        <h4>Rows with issues</h4>
+      <p class="section-help">Only the first {{ error_rows|length }} errors are shown.</p>
+        <div class="error-list">
+          {% for error in error_rows %}
+            <article class="summary-card">
+              <h4>Row {{ error.row_number }}</h4>
+              <p class="section-help">{{ error.message }}</p>
+              <ul>
+                {% for label, value in error.values %}
+                  <li><strong>{{ label }}:</strong> {{ value }}</li>
+                {% endfor %}
+              </ul>
+            </article>
+          {% endfor %}
+        </div>
+      {% endif %}
+      <div class="wizard-actions">
+        <a class="primary" href="{% url 'pmksy:import' %}">Import another file</a>
+        <a class="secondary" href="{% url 'pmksy:wizard' %}">Back to manual entry</a>
+      </div>
+    </section>
+  {% else %}
+    <section class="completion">
+      {% if missing_columns %}
+        <div class="message error">
+          <strong>Missing required columns:</strong>
+          <ul>
+            {% for label in missing_columns %}
+              <li>{{ label }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+      {% if unused_columns %}
+        <div class="message">
+          <strong>Unrecognised columns:</strong>
+          <ul>
+            {% for label in unused_columns %}
+              <li>{{ label }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+      <h3>Column mapping</h3>
+      <table class="summary-table">
+        <thead>
+          <tr>
+            <th>File header</th>
+            <th>Model field</th>
+            <th>PMKSY column</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for column in recognized_columns %}
+            <tr>
+              <td>{{ column.source }}</td>
+              <td><code>{{ column.model_field }}</code></td>
+              <td>{{ column.model_label }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="3">No matching columns were detected.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <h3>Data preview</h3>
+      <p class="section-help">Showing the first {{ preview_table|length }} rows.</p>
+      <div class="table-wrapper">
+        <table class="summary-table">
+          <thead>
+            <tr>
+              {% for header in preview_headers %}
+                <th>{{ header.label }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in preview_table %}
+              <tr>
+                {% for value in row %}
+                  <td>{{ value }}</td>
+                {% endfor %}
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="{{ preview_headers|length }}">No sample rows available.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="wizard-actions">
+        {% if can_import %}
+          <form method="post" class="plain-form">
+            {% csrf_token %}
+            <input type="hidden" name="confirm" value="1" />
+            <button type="submit" class="primary">Import {{ target.label }}</button>
+          </form>
+        {% else %}
+          <button type="button" class="primary" disabled>Resolve issues to import</button>
+        {% endif %}
+        <form method="post" class="plain-form">
+          {% csrf_token %}
+          <button type="submit" name="cancel" value="1" class="secondary">Cancel import</button>
+        </form>
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}
