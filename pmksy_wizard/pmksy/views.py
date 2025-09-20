@@ -472,5 +472,199 @@ class BulkImportWizardView(View):
         request.session.pop(self.session_key, None)
 
 
+wizard_view = SurveyWizardView.as_view()
+
+
+class BulkImportWizardView(View):
+    """Two-step workflow to import CSV data in bulk."""
+
+    template_upload = "pmksy/import_wizard_upload.html"
+    template_preview = "pmksy/import_wizard_preview.html"
+    session_key = "pmksy_bulk_import"
+
+    def get(self, request: HttpRequest, step: str | None = None) -> HttpResponse:
+        if step == "preview":
+            return self.render_preview(request)
+        return self.render_upload(request)
+
+    def post(self, request: HttpRequest, step: str | None = None) -> HttpResponse:
+        if step == "preview":
+            if "cancel" in request.POST:
+                self.clear_storage(request)
+                messages.info(request, "Bulk import cancelled.")
+                return redirect("pmksy:import")
+            if "confirm" in request.POST:
+                return self.perform_import(request)
+            return self.render_preview(request)
+        return self.handle_upload(request)
+
+    # ------------------------------------------------------------------
+    def render_upload(self, request: HttpRequest, form: django_forms.Form | None = None) -> HttpResponse:
+        form = form or forms.ImportUploadForm(choices=importers.target_choices())
+        context = {
+            "form": form,
+            "targets": importers.TARGET_LIST,
+        }
+        return render(request, self.template_upload, context)
+
+    def handle_upload(self, request: HttpRequest) -> HttpResponse:
+        form = forms.ImportUploadForm(request.POST or None, request.FILES or None, choices=importers.target_choices())
+        if not form.is_valid():
+            return self.render_upload(request, form)
+
+        target_key = form.cleaned_data["target"]
+        try:
+            target = importers.get_target(target_key)
+        except KeyError:
+            form.add_error("target", "Unknown dataset selected.")
+            return self.render_upload(request, form)
+
+        uploaded_file = form.cleaned_data["data_file"]
+        try:
+            parsed = importers.parse_uploaded_file(uploaded_file)
+        except ValueError as exc:
+            form.add_error("data_file", str(exc))
+            return self.render_upload(request, form)
+
+        storage_payload = {
+            "target": target.key,
+            "columns": parsed.columns,
+            "column_labels": parsed.original_headers,
+            "rows": [{"line": row.line_number, "values": dict(row.values)} for row in parsed.rows],
+        }
+        self.set_storage(request, storage_payload)
+        messages.info(request, "File parsed successfully. Review the preview before importing.")
+        return redirect("pmksy:import-preview")
+
+    def render_preview(self, request: HttpRequest) -> HttpResponse:
+        storage = self.get_storage(request)
+        if not storage:
+            messages.info(request, "Upload a CSV file to begin a bulk import.")
+            return redirect("pmksy:import")
+
+        target = importers.get_target(storage["target"])
+        context = self.build_preview_context(target, storage)
+        return render(request, self.template_preview, context)
+
+    def perform_import(self, request: HttpRequest) -> HttpResponse:
+        storage = self.get_storage(request)
+        if not storage:
+            messages.info(request, "Upload a CSV file to begin a bulk import.")
+            return redirect("pmksy:import")
+
+        target = importers.get_target(storage["target"])
+        context = self.build_preview_context(target, storage)
+        if not context["can_import"]:
+            messages.error(request, "Required columns are missing. Update the file and try again.")
+            return render(request, self.template_preview, context)
+
+        parsed_rows = [
+            importers.ParsedRow(line_number=row["line"], values=row["values"])
+            for row in storage["rows"]
+        ]
+        summary = importers.perform_import(target, parsed_rows)
+
+        if summary.created and not summary.error_count:
+            messages.success(request, f"Imported {summary.created} rows into {target.label}.")
+        elif summary.created:
+            messages.warning(
+                request,
+                f"Imported {summary.created} rows into {target.label} with {summary.error_count} errors.",
+            )
+        else:
+            messages.error(request, "No rows were imported. See the error details below.")
+
+        error_rows = [
+            {
+                "row_number": error.row_number,
+                "message": error.message,
+                "values": [
+                    (
+                        context["column_labels"].get(key, key),
+                        "—" if value in (None, "") else str(value),
+                    )
+                    for key, value in error.values.items()
+                ],
+            }
+            for error in summary.errors
+        ]
+
+        context.update(
+            {
+                "import_complete": True,
+                "summary": summary,
+                "error_rows": error_rows,
+            }
+        )
+        self.clear_storage(request)
+        return render(request, self.template_preview, context)
+
+    # ------------------------------------------------------------------
+    def build_preview_context(self, target: importers.Dataset, storage: Dict[str, object]) -> Dict[str, Any]:
+        columns: List[str] = list(storage.get("columns", []))
+        column_labels: Dict[str, str] = dict(storage.get("column_labels", {}))
+        rows: List[Dict[str, Any]] = list(storage.get("rows", []))
+
+        available_columns = set(columns)
+        target_columns = set(target.field_map.keys())
+        missing = sorted(target.required - available_columns)
+        recognized = [col for col in columns if col in target_columns]
+        unused = [col for col in columns if col not in target_columns]
+
+        preview_rows = rows[:10]
+        preview_headers = [
+            {
+                "key": col,
+                "label": column_labels.get(col, col),
+            }
+            for col in columns
+        ]
+        preview_table = [
+            [row["values"].get(col, "") for col in columns]
+            for row in preview_rows
+        ]
+
+        context: Dict[str, Any] = {
+            "target": target,
+            "row_count": len(rows),
+            "column_order": columns,
+            "column_labels": column_labels,
+            "preview_headers": preview_headers,
+            "preview_table": preview_table,
+            "recognized_columns": [
+                {
+                    "source": column_labels.get(col, col),
+                    "normalised": col,
+                    "model_field": target.field_map[col],
+                    "model_label": target.humanised_column(col),
+                }
+                for col in recognized
+            ],
+            "unused_columns": [column_labels.get(col, col) for col in unused],
+            "missing_columns": [target.humanised_column(col) for col in missing],
+            "required_columns": [target.humanised_column(col) for col in target.required],
+            "expected_columns": [
+                {
+                    "column": col,
+                    "label": target.humanised_column(col),
+                }
+                for col in target.expected_columns
+            ],
+            "can_import": len(rows) > 0 and not missing,
+            "error_rows": [],
+        }
+        return context
+
+    def get_storage(self, request: HttpRequest) -> Dict[str, Any] | None:
+        return request.session.get(self.session_key)
+
+    def set_storage(self, request: HttpRequest, payload: Dict[str, Any]) -> None:
+        request.session[self.session_key] = payload
+        request.session.modified = True
+
+    def clear_storage(self, request: HttpRequest) -> None:
+        request.session.pop(self.session_key, None)
+
+
 bulk_import_wizard_view = BulkImportWizardView.as_view()
 
