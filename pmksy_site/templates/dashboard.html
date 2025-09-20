@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard · PMKSY Survey{% endblock %}
+{% block content %}
+<h1 class="mb-4">Survey Data Dashboard</h1>
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Bulk Upload Wizard</h5>
+                <p class="card-text">Import survey spreadsheets with interactive column mapping.</p>
+                <a href="{{ datawizard_url }}" class="btn btn-primary">Launch Wizard</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Django Admin</h5>
+                <p class="card-text">Review, edit and export survey records manually.</p>
+                <a href="{{ admin_url }}" class="btn btn-outline-primary">Go to Admin</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Support</h5>
+                <p class="card-text">Need help? Contact the survey data management team.</p>
+                <a href="mailto:support@example.com" class="btn btn-outline-secondary">Email Support</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h2 class="h4 mb-3">Data Coverage</h2>
+<div class="row">
+    {% for label, count in model_counts.items %}
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <h6 class="text-uppercase text-muted">{{ label }}</h6>
+                <p class="display-6">{{ count }}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<h2 class="h4 mt-5 mb-3">Recent Imports</h2>
+<div class="card shadow-sm">
+    <div class="card-body">
+        {% if recent_runs %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Dataset</th>
+                        <th scope="col">Uploaded By</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in recent_runs %}
+                    <tr>
+                        <td>{{ run.name|default:run.source.name }}</td>
+                        <td>{{ run.user }}</td>
+                        <td>
+                            <span class="badge bg-{% if run.finished %}success{% elif run.failed %}danger{% else %}warning{% endif %}">
+                                {% if run.finished %}Completed{% elif run.failed %}Failed{% else %}Running{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ run.created|date:'Y-m-d H:i' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="mb-0 text-muted">No imports have been run yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
