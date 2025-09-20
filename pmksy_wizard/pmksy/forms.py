@@ -227,6 +227,28 @@ class IrrigatedRainfedForm(forms.ModelForm):
         for field in self.fields.values():
             field.required = False
 
+
+class ImportUploadForm(forms.Form):
+    """Initial step of the bulk import wizard."""
+
+    target = forms.ChoiceField(label="Dataset", help_text="Select the table you want to import data into.")
+    data_file = forms.FileField(
+        label="Data file",
+        help_text="Upload a UTF-8 CSV file. Column headers should match the PMKSY schema names.",
+    )
+
+    def __init__(self, *args, **kwargs):
+        choices = kwargs.pop("choices", ())
+        super().__init__(*args, **kwargs)
+        self.fields["target"].choices = list(choices)
+
+    def clean_data_file(self):
+        uploaded = self.cleaned_data.get("data_file")
+        if uploaded and uploaded.size == 0:
+            raise forms.ValidationError("The selected file is empty.")
+        return uploaded
+
+
 LandHoldingFormSet = forms.formset_factory(LandHoldingForm, extra=1, can_delete=True)
 AssetFormSet = forms.formset_factory(AssetForm, extra=1, can_delete=True)
 CropHistoryFormSet = forms.formset_factory(CropHistoryForm, extra=1, can_delete=True)
