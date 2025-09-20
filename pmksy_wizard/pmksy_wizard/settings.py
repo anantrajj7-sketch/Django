@@ -106,9 +106,9 @@ DATA_WIZARD = {
         "data_wizard.sources.FileSource",
     ],
     "IMPORTERS": [
-        "data_wizard.importers.CSVImporter",
-        "data_wizard.importers.ExcelImporter",
-        "data_wizard.importers.JSONImporter",
+        "pmksy.data_wizard_shims.CSVImporter",
+        "pmksy.data_wizard_shims.ExcelImporter",
+        "pmksy.data_wizard_shims.JSONImporter",
     ],
 }
 

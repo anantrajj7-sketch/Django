@@ -2,12 +2,16 @@
 """Views providing a django-data-wizard powered import interface."""
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
-from django.http import Http404
+from django import forms as django_forms
+from django.contrib import messages
+from django.http import Http404, HttpRequest, HttpResponse
+from django.shortcuts import redirect, render
 from django.urls import reverse
-
+from django.utils.functional import cached_property
 from django.views import View
+from django.views.generic import TemplateView
 
 from . import forms, importers as pmksy_importers, models
 
@@ -69,10 +73,12 @@ class SurveyWizardView(View):
     STEP_ORDER: Tuple[str, ...] = tuple(STEP_CONFIG.keys())
 
 
+
 from data_wizard import importers as wizard_importers
 from data_wizard.sources import FileSource
 from data_wizard.views import ImportWizard
 
+from . import data_wizard_shims as wizard_importers
 from . import serializers
 
 
@@ -228,7 +234,7 @@ class ImportLandingView(TemplateView):
         return context
 
 
-class BasePMKSYImportWizard(ImportWizard):
+class BasePMKSYImportWizard(View):
     """Shared configuration for all PMKSY import workflows."""
 
     sources = (FileSource,)
