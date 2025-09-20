@@ -18,6 +18,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",
+    "data_wizard",
     "pmksy",
 ]
 
@@ -82,8 +84,29 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "pmksy" / "static"]
 
+
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-LOGIN_REDIRECT_URL = "pmksy:wizard"
-LOGOUT_REDIRECT_URL = "pmksy:wizard"
-SESSION_SERIALIZER = "django.contrib.sessions.serializers.PickleSerializer"
+REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ],
+}
+
+DATA_WIZARD = {
+    "STORAGE": "data_wizard.storage.FileSystemStorage",
+    "RESULTS_STORAGE": "data_wizard.storage.ModelResultStorage",
+    "SOURCES": [
+        "data_wizard.sources.FileSource",
+    ],
+    "IMPORTERS": [
+        "data_wizard.importers.CSVImporter",
+        "data_wizard.importers.ExcelImporter",
+        "data_wizard.importers.JSONImporter",
+    ],
+}
+
