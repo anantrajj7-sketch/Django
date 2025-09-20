@@ -72,3 +72,4 @@ class ImporterFunctionTests(TestCase):
         self.assertEqual(summary.created, 0)
         self.assertEqual(summary.error_count, 1)
         self.assertIn("Invalid pk", summary.errors[0].message)
+

@@ -1,4 +1,3 @@
-# PMKSY Survey Wizard
 
 This Django project implements a multi-step data collection wizard for the PMKSY socio-economic survey schema documented in `pmksy_schema.md`.
 
@@ -7,7 +6,9 @@ This Django project implements a multi-step data collection wizard for the PMKSY
 - Dynamic formsets for repeated sections such as land holdings, assets, crop history, cost of cultivation and more.
 - SQLite database configuration out of the box with admin registrations for all models.
 - Responsive UI with progressive enhancement for adding formset rows without reloading.
+
 - CSV-driven bulk import wizard backed by the official [`data-wizard`](https://pypi.org/project/data-wizard/) package for ingesting data that already exists in spreadsheets following the PMKSY schema.
+
 
 ## Getting started
 1. Install dependencies (requires Python 3.11):
@@ -22,6 +23,7 @@ This Django project implements a multi-step data collection wizard for the PMKSY
    ```bash
    python manage.py runserver 0.0.0.0:8000
    ```
+
 4. Open `http://localhost:8000/` to use the wizard. Django admin is available at `http://localhost:8000/admin/`.
 
 ## Bulk import workflow

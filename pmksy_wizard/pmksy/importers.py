@@ -1,3 +1,4 @@
+
 """Dataset definitions for powering CSV imports via django-data-wizard."""
 from __future__ import annotations
 
@@ -301,6 +302,7 @@ def format_serializer_errors(errors) -> str:
     return str(errors)
 
 
+
 TARGET_DEFINITIONS: Sequence[tuple[str, str, str, type[models.Model], Sequence[str]]] = [
     (
         "farmers",
@@ -430,6 +432,7 @@ TARGET_DEFINITIONS: Sequence[tuple[str, str, str, type[models.Model], Sequence[s
     ),
 ]
 
+
 IMPORT_TARGETS: Dict[str, Dataset] = {}
 TARGET_LIST: List[Dataset] = []
 
@@ -439,14 +442,17 @@ for key, label, description, model, required_cols in TARGET_DEFINITIONS:
         label=label,
         description=description,
         model=model,
+
         required_columns=required_cols,
     )
     IMPORT_TARGETS[key] = target
     TARGET_LIST.append(target)
 
 
+
 def get_target(key: str) -> Dataset:
     """Retrieve the dataset configuration for a given key."""
+
 
     if key not in IMPORT_TARGETS:
         raise KeyError(f"Unknown import target '{key}'")
