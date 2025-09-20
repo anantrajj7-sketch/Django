@@ -9,7 +9,7 @@ from django.urls import reverse
 
 from django.views import View
 
-from . import forms, importers, models
+from . import forms, importers as pmksy_importers, models
 
 
 class SurveyWizardView(View):
@@ -69,7 +69,7 @@ class SurveyWizardView(View):
     STEP_ORDER: Tuple[str, ...] = tuple(STEP_CONFIG.keys())
 
 
-from data_wizard import importers
+from data_wizard import importers as wizard_importers
 from data_wizard.sources import FileSource
 from data_wizard.views import ImportWizard
 
@@ -233,9 +233,9 @@ class BasePMKSYImportWizard(ImportWizard):
 
     sources = (FileSource,)
     importer_classes = (
-        importers.CSVImporter,
-        importers.ExcelImporter,
-        importers.JSONImporter,
+        wizard_importers.CSVImporter,
+        wizard_importers.ExcelImporter,
+        wizard_importers.JSONImporter,
     )
 
 
@@ -306,28 +306,28 @@ class BulkImportWizardView(View):
 
     # ------------------------------------------------------------------
     def render_upload(self, request: HttpRequest, form: django_forms.Form | None = None) -> HttpResponse:
-        form = form or forms.ImportUploadForm(choices=importers.target_choices())
+        form = form or forms.ImportUploadForm(choices=pmksy_importers.target_choices())
         context = {
             "form": form,
-            "targets": importers.TARGET_LIST,
+            "targets": pmksy_importers.TARGET_LIST,
         }
         return render(request, self.template_upload, context)
 
     def handle_upload(self, request: HttpRequest) -> HttpResponse:
-        form = forms.ImportUploadForm(request.POST or None, request.FILES or None, choices=importers.target_choices())
+        form = forms.ImportUploadForm(request.POST or None, request.FILES or None, choices=pmksy_importers.target_choices())
         if not form.is_valid():
             return self.render_upload(request, form)
 
         target_key = form.cleaned_data["target"]
         try:
-            target = importers.get_target(target_key)
+            target = pmksy_importers.get_target(target_key)
         except KeyError:
             form.add_error("target", "Unknown dataset selected.")
             return self.render_upload(request, form)
 
         uploaded_file = form.cleaned_data["data_file"]
         try:
-            parsed = importers.parse_uploaded_file(uploaded_file)
+            parsed = pmksy_importers.parse_uploaded_file(uploaded_file)
         except ValueError as exc:
             form.add_error("data_file", str(exc))
             return self.render_upload(request, form)
@@ -348,7 +348,7 @@ class BulkImportWizardView(View):
             messages.info(request, "Upload a CSV file to begin a bulk import.")
             return redirect("pmksy:import")
 
-        target = importers.get_target(storage["target"])
+        target = pmksy_importers.get_target(storage["target"])
         context = self.build_preview_context(target, storage)
         return render(request, self.template_preview, context)
 
@@ -358,17 +358,17 @@ class BulkImportWizardView(View):
             messages.info(request, "Upload a CSV file to begin a bulk import.")
             return redirect("pmksy:import")
 
-        target = importers.get_target(storage["target"])
+        target = pmksy_importers.get_target(storage["target"])
         context = self.build_preview_context(target, storage)
         if not context["can_import"]:
             messages.error(request, "Required columns are missing. Update the file and try again.")
             return render(request, self.template_preview, context)
 
         parsed_rows = [
-            importers.ParsedRow(line_number=row["line"], values=row["values"])
+            pmksy_importers.ParsedRow(line_number=row["line"], values=row["values"])
             for row in storage["rows"]
         ]
-        summary = importers.perform_import(target, parsed_rows)
+        summary = pmksy_importers.perform_import(target, parsed_rows)
 
         if summary.created and not summary.error_count:
             messages.success(request, f"Imported {summary.created} rows into {target.label}.")
@@ -406,7 +406,7 @@ class BulkImportWizardView(View):
         return render(request, self.template_preview, context)
 
     # ------------------------------------------------------------------
-    def build_preview_context(self, target: importers.ImportTarget, storage: Dict[str, object]) -> Dict[str, Any]:
+    def build_preview_context(self, target: pmksy_importers.Dataset, storage: Dict[str, object]) -> Dict[str, Any]:
         columns: List[str] = list(storage.get("columns", []))
         column_labels: Dict[str, str] = dict(storage.get("column_labels", {}))
         rows: List[Dict[str, Any]] = list(storage.get("rows", []))
@@ -500,28 +500,28 @@ class BulkImportWizardView(View):
 
     # ------------------------------------------------------------------
     def render_upload(self, request: HttpRequest, form: django_forms.Form | None = None) -> HttpResponse:
-        form = form or forms.ImportUploadForm(choices=importers.target_choices())
+        form = form or forms.ImportUploadForm(choices=pmksy_importers.target_choices())
         context = {
             "form": form,
-            "targets": importers.TARGET_LIST,
+            "targets": pmksy_importers.TARGET_LIST,
         }
         return render(request, self.template_upload, context)
 
     def handle_upload(self, request: HttpRequest) -> HttpResponse:
-        form = forms.ImportUploadForm(request.POST or None, request.FILES or None, choices=importers.target_choices())
+        form = forms.ImportUploadForm(request.POST or None, request.FILES or None, choices=pmksy_importers.target_choices())
         if not form.is_valid():
             return self.render_upload(request, form)
 
         target_key = form.cleaned_data["target"]
         try:
-            target = importers.get_target(target_key)
+            target = pmksy_importers.get_target(target_key)
         except KeyError:
             form.add_error("target", "Unknown dataset selected.")
             return self.render_upload(request, form)
 
         uploaded_file = form.cleaned_data["data_file"]
         try:
-            parsed = importers.parse_uploaded_file(uploaded_file)
+            parsed = pmksy_importers.parse_uploaded_file(uploaded_file)
         except ValueError as exc:
             form.add_error("data_file", str(exc))
             return self.render_upload(request, form)
@@ -542,7 +542,7 @@ class BulkImportWizardView(View):
             messages.info(request, "Upload a CSV file to begin a bulk import.")
             return redirect("pmksy:import")
 
-        target = importers.get_target(storage["target"])
+        target = pmksy_importers.get_target(storage["target"])
         context = self.build_preview_context(target, storage)
         return render(request, self.template_preview, context)
 
@@ -552,17 +552,17 @@ class BulkImportWizardView(View):
             messages.info(request, "Upload a CSV file to begin a bulk import.")
             return redirect("pmksy:import")
 
-        target = importers.get_target(storage["target"])
+        target = pmksy_importers.get_target(storage["target"])
         context = self.build_preview_context(target, storage)
         if not context["can_import"]:
             messages.error(request, "Required columns are missing. Update the file and try again.")
             return render(request, self.template_preview, context)
 
         parsed_rows = [
-            importers.ParsedRow(line_number=row["line"], values=row["values"])
+            pmksy_importers.ParsedRow(line_number=row["line"], values=row["values"])
             for row in storage["rows"]
         ]
-        summary = importers.perform_import(target, parsed_rows)
+        summary = pmksy_importers.perform_import(target, parsed_rows)
 
         if summary.created and not summary.error_count:
             messages.success(request, f"Imported {summary.created} rows into {target.label}.")
@@ -600,7 +600,7 @@ class BulkImportWizardView(View):
         return render(request, self.template_preview, context)
 
     # ------------------------------------------------------------------
-    def build_preview_context(self, target: importers.Dataset, storage: Dict[str, object]) -> Dict[str, Any]:
+    def build_preview_context(self, target: pmksy_importers.Dataset, storage: Dict[str, object]) -> Dict[str, Any]:
         columns: List[str] = list(storage.get("columns", []))
         column_labels: Dict[str, str] = dict(storage.get("column_labels", {}))
         rows: List[Dict[str, Any]] = list(storage.get("rows", []))
@@ -696,28 +696,28 @@ class BulkImportWizardView(View):
 
     # ------------------------------------------------------------------
     def render_upload(self, request: HttpRequest, form: django_forms.Form | None = None) -> HttpResponse:
-        form = form or forms.ImportUploadForm(choices=importers.target_choices())
+        form = form or forms.ImportUploadForm(choices=pmksy_importers.target_choices())
         context = {
             "form": form,
-            "targets": importers.TARGET_LIST,
+            "targets": pmksy_importers.TARGET_LIST,
         }
         return render(request, self.template_upload, context)
 
     def handle_upload(self, request: HttpRequest) -> HttpResponse:
-        form = forms.ImportUploadForm(request.POST or None, request.FILES or None, choices=importers.target_choices())
+        form = forms.ImportUploadForm(request.POST or None, request.FILES or None, choices=pmksy_importers.target_choices())
         if not form.is_valid():
             return self.render_upload(request, form)
 
         target_key = form.cleaned_data["target"]
         try:
-            target = importers.get_target(target_key)
+            target = pmksy_importers.get_target(target_key)
         except KeyError:
             form.add_error("target", "Unknown dataset selected.")
             return self.render_upload(request, form)
 
         uploaded_file = form.cleaned_data["data_file"]
         try:
-            parsed = importers.parse_uploaded_file(uploaded_file)
+            parsed = pmksy_importers.parse_uploaded_file(uploaded_file)
         except ValueError as exc:
             form.add_error("data_file", str(exc))
             return self.render_upload(request, form)
@@ -738,7 +738,7 @@ class BulkImportWizardView(View):
             messages.info(request, "Upload a CSV file to begin a bulk import.")
             return redirect("pmksy:import")
 
-        target = importers.get_target(storage["target"])
+        target = pmksy_importers.get_target(storage["target"])
         context = self.build_preview_context(target, storage)
         return render(request, self.template_preview, context)
 
@@ -748,17 +748,17 @@ class BulkImportWizardView(View):
             messages.info(request, "Upload a CSV file to begin a bulk import.")
             return redirect("pmksy:import")
 
-        target = importers.get_target(storage["target"])
+        target = pmksy_importers.get_target(storage["target"])
         context = self.build_preview_context(target, storage)
         if not context["can_import"]:
             messages.error(request, "Required columns are missing. Update the file and try again.")
             return render(request, self.template_preview, context)
 
         parsed_rows = [
-            importers.ParsedRow(line_number=row["line"], values=row["values"])
+            pmksy_importers.ParsedRow(line_number=row["line"], values=row["values"])
             for row in storage["rows"]
         ]
-        summary = importers.perform_import(target, parsed_rows)
+        summary = pmksy_importers.perform_import(target, parsed_rows)
 
         if summary.created and not summary.error_count:
             messages.success(request, f"Imported {summary.created} rows into {target.label}.")
@@ -796,7 +796,7 @@ class BulkImportWizardView(View):
         return render(request, self.template_preview, context)
 
     # ------------------------------------------------------------------
-    def build_preview_context(self, target: importers.Dataset, storage: Dict[str, object]) -> Dict[str, Any]:
+    def build_preview_context(self, target: pmksy_importers.Dataset, storage: Dict[str, object]) -> Dict[str, Any]:
         columns: List[str] = list(storage.get("columns", []))
         column_labels: Dict[str, str] = dict(storage.get("column_labels", {}))
         rows: List[Dict[str, Any]] = list(storage.get("rows", []))
