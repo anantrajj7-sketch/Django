@@ -9,7 +9,8 @@ from django.urls import include, path
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("data-wizard/", include("data_wizard.urls")),
+    path("datawizard/", include("data_wizard.urls")),
+
     path("", include("pmksy.urls", namespace="pmksy")),
 ]
 
