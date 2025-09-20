@@ -1,0 +1,62 @@
+{% extends "pmksy/base.html" %}
+{% block title %}Survey saved · PMKSY Survey Wizard{% endblock %}
+{% block content %}
+  <section class="completion">
+    <h2>Survey stored for {{ farmer.name }}</h2>
+    <p>
+      All sections of the PMKSY socio-economic survey have been persisted. You can
+      record another farmer or review the captured metrics below.
+    </p>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <h3>Location</h3>
+        <ul>
+          <li><strong>Village:</strong> {{ farmer.village|default:"—" }}</li>
+          <li><strong>Taluka / Block:</strong> {{ farmer.taluka_block|default:"—" }}</li>
+          <li><strong>District:</strong> {{ farmer.district|default:"—" }}</li>
+        </ul>
+      </div>
+      <div class="summary-card">
+        <h3>Household</h3>
+        <ul>
+          <li><strong>Contact:</strong> {{ farmer.contact_no|default:"—" }}</li>
+          <li><strong>Education:</strong> {{ farmer.education|default:"—" }}</li>
+          <li><strong>Family members:</strong> {{ family_total }}</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Section overview</h3>
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Section</th>
+          <th>Records saved</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Land holdings</td><td>{{ summary.land_holdings }}</td></tr>
+        <tr><td>Assets</td><td>{{ summary.assets }}</td></tr>
+        <tr><td>Crop history</td><td>{{ summary.crop_history }}</td></tr>
+        <tr><td>Water management</td><td>{{ summary.water_management }}</td></tr>
+        <tr><td>Pest &amp; disease</td><td>{{ summary.pest_disease }}</td></tr>
+        <tr><td>Cost of cultivation</td><td>{{ summary.cost_cultivation }}</td></tr>
+        <tr><td>Nutrient management</td><td>{{ summary.nutrient_management }}</td></tr>
+        <tr><td>Income from crops</td><td>{{ summary.income_crops }}</td></tr>
+        <tr><td>Irrigated vs rainfed</td><td>{{ summary.irrigated_rainfed }}</td></tr>
+        <tr><td>Enterprises</td><td>{{ summary.enterprises }}</td></tr>
+        <tr><td>Annual family income</td><td>{{ summary.annual_income }}</td></tr>
+        <tr><td>Consumption pattern</td><td>{{ summary.consumption }}</td></tr>
+        <tr><td>Market price</td><td>{{ summary.market_price }}</td></tr>
+        <tr><td>Migration</td><td>{{ summary.migration }}</td></tr>
+        <tr><td>Adaptation strategies</td><td>{{ summary.adaptation }}</td></tr>
+        <tr><td>Financial record</td><td>{{ summary.financial_record }}</td></tr>
+      </tbody>
+    </table>
+
+    <div class="wizard-actions">
+      <a href="{% url 'pmksy:wizard' %}" class="primary">Capture another farmer</a>
+      <a href="{% url 'admin:index' %}" class="secondary">Go to admin</a>
+    </div>
+  </section>
+{% endblock %}
