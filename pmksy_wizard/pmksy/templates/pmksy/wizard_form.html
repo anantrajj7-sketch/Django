@@ -1,0 +1,138 @@
+{% extends "pmksy/base.html" %}
+{% block title %}Step {{ step_index }} – {{ step_config.title }} · PMKSY Survey Wizard{% endblock %}
+{% block content %}
+  <section class="wizard-status">
+    <div class="progress">
+      <span class="progress-step">Step {{ step_index }} of {{ step_count }}</span>
+      <div class="progress-bar">
+        <div class="progress-value"></div>
+      </div>
+    </div>
+    <div class="step-heading">
+      <h2>{{ step_config.title }}</h2>
+      <p>{{ step_config.description }}</p>
+    </div>
+  </section>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form %}
+      <section class="form-section">
+        {% if form.non_field_errors %}
+          <div class="form-errors">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="form-grid">
+          {% for field in form.visible_fields %}
+            <div class="form-field {% if field.errors %}has-error{% endif %}">
+              {{ field.label_tag }}
+              {{ field }}
+              {% if field.help_text %}<small class="help">{{ field.help_text }}</small>{% endif %}
+              {% for error in field.errors %}
+                <small class="error">{{ error }}</small>
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% for key, title, formset in formsets %}
+      <section class="form-section" data-formset-prefix="{{ formset.prefix }}">
+        <div class="section-header">
+          <h3>{{ title }}</h3>
+          <p class="section-help">Add one entry per record. Use the remove checkbox to discard a row.</p>
+        </div>
+        {{ formset.management_form }}
+        <div class="formset-container" data-formset-container>
+          {% for subform in formset.forms %}
+            <div class="form-card" data-formset-form>
+              {% for hidden in subform.hidden_fields %}{{ hidden }}{% endfor %}
+              {% if subform.non_field_errors %}
+                <div class="form-errors">{{ subform.non_field_errors }}</div>
+              {% endif %}
+              <div class="form-grid">
+                {% for field in subform.visible_fields %}
+                  <div class="form-field {% if field.errors %}has-error{% endif %}">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% for error in field.errors %}
+                      <small class="error">{{ error }}</small>
+                    {% endfor %}
+                  </div>
+                {% endfor %}
+              </div>
+              {% if formset.can_delete %}
+                <label class="delete-toggle">{{ subform.DELETE }} Remove</label>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        <button type="button" class="add-form" data-formset-add data-formset-prefix="{{ formset.prefix }}">Add another {{ title|lower }}</button>
+        <script type="text/template" id="template-{{ formset.prefix }}">
+          {% with subform=formset.empty_form %}
+            <div class="form-card" data-formset-form>
+              {% for hidden in subform.hidden_fields %}{{ hidden.as_widget }}{% endfor %}
+              <div class="form-grid">
+                {% for field in subform.visible_fields %}
+                  <div class="form-field">
+                    {{ field.label_tag }}
+                    {{ field.as_widget }}
+                  </div>
+                {% endfor %}
+              </div>
+              {% if formset.can_delete %}
+                <label class="delete-toggle">{{ subform.DELETE.as_widget }} Remove</label>
+              {% endif %}
+            </div>
+          {% endwith %}
+        </script>
+      </section>
+    {% endfor %}
+
+    <div class="wizard-actions">
+      {% if previous_step %}
+        <button type="submit" name="_prev" value="1" class="secondary">Back</button>
+      {% endif %}
+      {% if next_step %}
+        <button type="submit" class="primary">Save &amp; continue</button>
+      {% else %}
+        <button type="submit" class="primary">Save survey</button>
+      {% endif %}
+    </div>
+  </form>
+
+  <script>
+    (function () {
+      function updateProgressBar() {
+        const bar = document.querySelector('.progress-value');
+        const step = {{ step_index }};
+        const total = {{ step_count }};
+        if (bar && total > 0) {
+          bar.style.width = Math.round((step / total) * 100) + '%';
+        }
+      }
+
+      function setupFormset(section) {
+        const addBtn = section.querySelector('[data-formset-add]');
+        if (!addBtn) {
+          return;
+        }
+        const prefix = section.dataset.formsetPrefix;
+        const templateEl = document.getElementById('template-' + prefix);
+        const container = section.querySelector('[data-formset-container]');
+        const totalInput = section.querySelector('#id_' + prefix + '-TOTAL_FORMS');
+        if (!templateEl || !container || !totalInput) {
+          return;
+        }
+        addBtn.addEventListener('click', function () {
+          const formCount = parseInt(totalInput.value, 10);
+          const html = templateEl.innerHTML.replace(/__prefix__/g, formCount);
+          container.insertAdjacentHTML('beforeend', html);
+          totalInput.value = formCount + 1;
+        });
+      }
+
+      document.querySelectorAll('[data-formset-prefix]').forEach(setupFormset);
+      updateProgressBar();
+    })();
+  </script>
+{% endblock %}

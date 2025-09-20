@@ -1,5 +1,6 @@
 :root {
   --primary: #0f766e;
+
   --primary-dark: #0d4f46;
   --surface: #ffffff;
   --background: #f8fafc;
@@ -10,14 +11,18 @@
 
 * {
   box-sizing: border-box;
+
 }
 
 body {
   font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
   margin: 0;
   background: var(--background);
   color: var(--text);
   line-height: 1.6;
+
+
 }
 
 .container {
@@ -25,6 +30,7 @@ body {
   margin: 0 auto;
   padding: 1.5rem;
 }
+
 
 .app-header,
 .app-footer {
@@ -40,10 +46,13 @@ body {
   text-align: center;
   color: var(--muted);
   box-shadow: none;
+
+
 }
 
 .app-header h1 {
   margin: 0;
+
   font-size: clamp(1.6rem, 1.8vw, 2.4rem);
 }
 
@@ -240,5 +249,6 @@ form[data-wizard-form] .actions {
 
   .wizard-card {
     padding: 1rem;
+
   }
 }

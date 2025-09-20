@@ -4,6 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
     <title>{% block title %}PMKSY Bulk Import{% endblock %}</title>
     <link
       rel="stylesheet"
@@ -14,28 +15,35 @@
     />
     <link rel="stylesheet" href="{% static 'pmksy/css/styles.css' %}" />
     {% block extra_head %}{% endblock %}
+
   </head>
   <body>
     <header class="app-header">
       <div class="container">
+
         <h1>PMKSY Data Import Hub</h1>
         <p class="lead">
           Upload spreadsheet or CSV extracts in line with the PMKSY socio-economic schema and let
           <strong>django-data-wizard</strong> guide the mapping process.
+
         </p>
       </div>
     </header>
     <main class="container">
+
+
       {% block content %}{% endblock %}
     </main>
     <footer class="app-footer">
       <div class="container">
         <p>
+
           Need help shaping your files? Refer to the <code>pmksy_schema.md</code> dictionary for field names and
           relationships.
         </p>
       </div>
     </footer>
     {% block extra_body %}{% endblock %}
+
   </body>
 </html>

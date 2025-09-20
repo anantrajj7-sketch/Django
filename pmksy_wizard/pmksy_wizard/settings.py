@@ -84,6 +84,7 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "pmksy" / "static"]
 
+
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -108,3 +109,4 @@ DATA_WIZARD = {
         "data_wizard.importers.JSONImporter",
     ],
 }
+
